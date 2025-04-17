@@ -1,40 +1,123 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>⚠️ Insecure Render Status</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Lobby Bot Server Status</title>
   <style>
-    body { font-family: sans-serif; padding: 2em; max-width: 600px; margin: auto; }
-    .service { margin-bottom: 1em; padding: 1em; border: 1px solid #ddd; border-radius: 5px; }
-    .status-up { color: green; }
-    .status-down { color: red; }
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #121212;
+      color: #ffffff;
+    }
+
+    header {
+      background: linear-gradient(90deg, #2c2f4a, #1e1f2e);
+      padding: 20px;
+      text-align: center;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 2rem;
+      color: #00ffa3;
+    }
+
+    .status-container {
+      max-width: 800px;
+      margin: 40px auto;
+      padding: 20px;
+      background-color: #1e1e2e;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    }
+
+    .monitor {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background-color: #2b2b3c;
+      padding: 15px 20px;
+      margin-bottom: 10px;
+      border-radius: 8px;
+      transition: all 0.3s ease;
+    }
+
+    .monitor:hover {
+      background-color: #35354b;
+    }
+
+    .monitor-name {
+      font-size: 1.1rem;
+    }
+
+    .monitor-status {
+      font-weight: bold;
+    }
+
+    .up {
+      color: #00ffa3;
+    }
+
+    .down {
+      color: #ff4d4d;
+    }
+
+    .loading {
+      text-align: center;
+      font-size: 1.2rem;
+      margin-top: 50px;
+    }
   </style>
 </head>
 <body>
-  <h1>Render Server Status</h1>
-  <div id="services">Loading...</div>
+  <header>
+    <h1>Lobby Bot Server Status</h1>
+  </header>
+
+  <div class="status-container" id="status">
+    <div class="loading">Loading server statuses...</div>
+  </div>
 
   <script>
-    const TOKEN = 'RENDER_API_TOKEN_HERE'; // ❗ Replace this with your token (if you dare)
+    const API_KEY = 'YOUR_API_KEY_HERE';
+    const statusContainer = document.getElementById('status');
 
-    fetch('https://api.render.com/v1/services', {
+    fetch('https://api.uptimerobot.com/v2/getMonitors', {
+      method: 'POST',
       headers: {
-        'Authorization': `Bearer ${TOKEN}`
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        api_key: API_KEY,
+        format: 'json',
+        logs: 0
+      })
+    })
+    .then(response => response.json())
+    .then(data => {
+      statusContainer.innerHTML = '';
+      if (data.monitors && data.monitors.length > 0) {
+        data.monitors.forEach(monitor => {
+          const status = monitor.status === 2 ? 'Up' : 'Down';
+          const statusClass = monitor.status === 2 ? 'up' : 'down';
+          const monitorEl = document.createElement('div');
+          monitorEl.className = 'monitor';
+          monitorEl.innerHTML = `
+            <div class="monitor-name">${monitor.friendly_name}</div>
+            <div class="monitor-status ${statusClass}">${status}</div>
+          `;
+          statusContainer.appendChild(monitorEl);
+        });
+      } else {
+        statusContainer.innerHTML = '<div class="loading">No servers found.</div>';
       }
     })
-    .then(res => res.json())
-    .then(data => {
-      const container = document.getElementById('services');
-      container.innerHTML = '';
-      data.forEach(service => {
-        const el = document.createElement('div');
-        el.className = 'service';
-        el.innerHTML = `<strong>${service.service.name}</strong>: <span class="${service.service.status === 'live' ? 'status-up' : 'status-down'}">${service.service.status}</span>`;
-        container.appendChild(el);
-      });
-    })
-    .catch(err => {
-      document.getElementById('services').innerText = 'Failed to load status.';
-      console.error(err);
+    .catch(error => {
+      console.error('Error fetching monitors:', error);
+      statusContainer.innerHTML = '<div class="loading">Failed to load server statuses.</div>';
     });
   </script>
 </body>
